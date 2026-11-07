@@ -566,8 +566,6 @@ async def drain_recordings(store, *, provider_outbox_factory=None) -> bool:
                 _retry_reason(error),
                 getattr(error, 'store_tables', 'n/a'),
             )
-        if not failed:
-            admitted += 1
 
         def defer(tx):
             # Admission can return without moving the obligation (for example
@@ -575,6 +573,9 @@ async def drain_recordings(store, *, provider_outbox_factory=None) -> bool:
             # so a no-op cannot monopolize every immediately repeated pass,
             # and never overwrite a concurrently admitted row.
             latest = tx.get('jobs', segment)
+            if latest.get('state') != 'record_pending':
+                # The row left record_pending: it was admitted (by us or a peer).
+                return True
             if latest.get('state') == 'record_pending':
                 delay = 60
                 if not failed and (latest.get('partial_run') or {}).get('complete'):
@@ -590,7 +591,10 @@ async def drain_recordings(store, *, provider_outbox_factory=None) -> bool:
                 latest['available_at'] = max(0 if current == lease else current, time.time() + delay)
                 tx.put('jobs', segment, latest)
 
-        await run_blocking(db_executor, store.run, defer)
+        # Progress means the row actually left record_pending; a normal return can be a
+        # no-op (an unchanged partial inventory poll), which must not count.
+        if await run_blocking(db_executor, store.run, defer):
+            admitted += 1
 
     async def worker():
         # next() has no await: each selected row belongs to one local worker.

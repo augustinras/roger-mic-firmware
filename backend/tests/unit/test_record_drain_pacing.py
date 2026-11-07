@@ -60,3 +60,13 @@ def test_kill_switch_restores_rescanning_full_pages(drain, monkeypatch):
 def test_a_partial_page_never_continues(drain, monkeypatch):
     _admission(drain, monkeypatch, {'s0'})
     assert asyncio.run(drain.drain_recordings(_store(1))) is False
+
+
+def test_a_noop_return_is_not_progress(drain, monkeypatch):
+    # Luna BLOCKING: a normal return that leaves the row record_pending (an unchanged
+    # partial inventory poll) must not make a full page look productive.
+    async def noop(store, pending):
+        return None
+
+    monkeypatch.setattr(drain, 'admit_recording', noop)
+    assert asyncio.run(drain.drain_recordings(_store(2))) is False
