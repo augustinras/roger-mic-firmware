@@ -431,6 +431,13 @@ static void aad_thread_fn(void *p1, void *p2, void *p3)
 /* Called per mic frame: track silence and request AAD sleep after a hold. */
 static void aad_track_silence(const int16_t *buf, size_t n)
 {
+    /* Keep AAD initialization enabled: it also powers the microphone rail.
+     * Continuous mode suppresses only automatic sleep, including offline.
+     * Explicit mic_off()/power-button handling is unchanged. */
+    if (IS_ENABLED(CONFIG_OMI_MIC_CONTINUOUS_CAPTURE)) {
+        return;
+    }
+
     int64_t now = k_uptime_get();
 
     if (atomic_cas(&aad_woke, 1, 0)) {

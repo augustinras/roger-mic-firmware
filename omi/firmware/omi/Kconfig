@@ -111,6 +111,16 @@ config OMI_ENABLE_T5838_AAD
          point the driver resumes PDM and the software VAD takes over.
          Requires THSEL (P1.5) and WAKE (P1.2) to be wired to the T5838."
 
+config OMI_MIC_CONTINUOUS_CAPTURE
+    bool "Keep the microphone capturing continuously"
+    depends on OMI_ENABLE_T5838_AAD
+    default n
+    help
+        "Keep the PDM microphone awake during quiet periods, both online and
+         offline, so the opening words of a request are captured. Retains the
+         T5838 power-rail initialization and explicit power-off behavior.
+         Increases battery use and offline storage compared with AAD sleep."
+
 config OMI_AAD_SETTLE_MS
     int "T5838 AAD settle time before arming WAKE (ms)"
     range 100 3000

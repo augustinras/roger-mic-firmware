@@ -32,6 +32,7 @@
 #include "rtc.h"
 #include "sd_card.h"
 #include "settings.h"
+#include "wake_feedback.h"
 #include "storage.h"
 LOG_MODULE_REGISTER(transport, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -180,6 +181,32 @@ static struct bt_uuid_128 settings_mic_gain_characteristic_uuid =
 static struct bt_uuid_128 settings_charging_status_characteristic_uuid =
     BT_UUID_INIT_128(BT_UUID_128_ENCODE(0x19B10013, 0xE8F2, 0x537E, 0x4F6C, 0xD104768A1214));
 
+/* Read protocol version 1; write byte 1 for a transient wake indication.
+ * This never changes recording, charging, microphone or saved settings. */
+static struct bt_uuid_128 wake_feedback_uuid =
+    BT_UUID_INIT_128(BT_UUID_128_ENCODE(0x19B10014, 0xE8F2, 0x537E, 0x4F6C, 0xD104768A1214));
+static ssize_t wake_feedback_read(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                 void *buf, uint16_t len, uint16_t offset)
+{
+    const uint8_t version = 1;
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &version, sizeof(version));
+}
+static ssize_t wake_feedback_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                  const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    if (offset != 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+    if (len != 1) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    }
+    if (((const uint8_t *)buf)[0] != 1) {
+        return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
+    }
+    squire_wake_feedback_start();
+    return len;
+}
+
 static struct bt_gatt_attr settings_service_attr[] = {
     BT_GATT_PRIMARY_SERVICE(&settings_service_uuid),
     BT_GATT_CHARACTERISTIC(&settings_dim_ratio_characteristic_uuid.uuid,
@@ -201,6 +228,12 @@ static struct bt_gatt_attr settings_service_attr[] = {
                            NULL,
                            NULL),
     BT_GATT_CCC(charging_status_ccc_config_changed_handler, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    BT_GATT_CHARACTERISTIC(&wake_feedback_uuid.uuid,
+                           BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE,
+                           BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+                           wake_feedback_read,
+                           wake_feedback_write,
+                           NULL),
 };
 
 static struct bt_gatt_service settings_service = BT_GATT_SERVICE(settings_service_attr);
