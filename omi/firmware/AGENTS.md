@@ -17,7 +17,12 @@ installations. Check the downloaded OTA ZIP with
 `python3 omi/firmware/scripts/ci/check-roger-name.py <ota.zip>`.
 The microphone advertises the complete name `Roger`. Its existing wake
 characteristic requests six seconds of solid green when the paired app detects
-the wake word.
+the wake word. The Roger build stamps the same release version in the signed
+app header and device information. Its OTA ZIP updates the application.
+For a wired service fixture, use the staged HEX that passes Omi's bootloader
+policy and exact signed-app check. The raw merged build output is unsuitable
+for that purpose. Omi documents the stock 3.0.21 Bluetooth update failure in
+the [CV1 recovery guide](https://github.com/BasedHardware/omi/blob/bf8b408e153de69a8644949846a295a070102088/omi/firmware/docs/cv1-manufacturing-and-field-recovery.md#fielded-stock-3021-units).
 
 ## Formatting
 
