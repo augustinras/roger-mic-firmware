@@ -12,6 +12,13 @@ Firmware releases are manual via `.github/workflows/firmware_release.yml`:
 
 Build logic lives in `omi/firmware/scripts/ci/`.
 
+On this Roger branch, build without the publish input for individual CV1
+installations. Check the downloaded OTA ZIP with
+`python3 omi/firmware/scripts/ci/check-roger-name.py <ota.zip>`.
+The microphone advertises the complete name `Roger`. Its existing wake
+characteristic requests six seconds of solid green when the paired app detects
+the wake word.
+
 ## Formatting
 
 C/C++ files: `clang-format -i <files>` (the repo pre-commit hook covers this).
