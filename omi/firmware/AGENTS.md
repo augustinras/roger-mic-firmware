@@ -15,9 +15,9 @@ Build logic lives in `omi/firmware/scripts/ci/`.
 On this Roger branch, build without the publish input for individual CV1
 installations. Check the downloaded OTA ZIP with
 `python3 omi/firmware/scripts/ci/check-roger-name.py <ota.zip>`.
-The microphone advertises the complete name `Roger`. Its existing wake
-characteristic requests six seconds of solid green when the paired app detects
-the wake word. The Roger build stamps the same release version in the signed
+The name-only variant advertises the complete name `Roger`. It uses the
+stock CV1 3.0.21 application source and retains its original LED behavior.
+Only the Bluetooth name and release version settings differ from stock. The Roger build stamps the same release version in the signed
 app header and device information. Its OTA ZIP updates the application.
 For a wired service fixture, use the staged HEX that passes Omi's bootloader
 policy and exact signed-app check. The raw merged build output is unsuitable

@@ -3,6 +3,7 @@
 import json
 import struct
 import sys
+import uuid
 import zipfile
 
 
@@ -11,6 +12,10 @@ def check_advertisement(package):
         files = json.loads(archive.read("manifest.json"))["files"]
         app = next(entry for entry in files if entry["image_index"] == "0")
         image = archive.read(app["file"])
+
+    wake_characteristic = uuid.UUID("19b10014-e8f2-537e-4f6c-d104768a1214")
+    if wake_characteristic.bytes[::-1] in image:
+        raise ValueError("The name-only build contains the custom wake-light characteristic")
 
     # The signed image starts one MCUboot header before the app's load address.
     header_size = struct.unpack_from("<H", image, 8)[0]

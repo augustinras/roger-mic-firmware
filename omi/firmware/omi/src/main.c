@@ -2,8 +2,6 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/pm/device_runtime.h>
 #include <zephyr/shell/shell.h>
-#include <zephyr/sys/atomic.h>
-#include "lib/core/wake_feedback.h"
 
 #include "lib/core/button.h"
 #include "lib/core/codec.h"
@@ -39,18 +37,6 @@ bool is_connected = false;
 bool is_charging = false;
 bool is_off = false;
 bool blink_toggle = false;
-static atomic_t wake_feedback_started;
-static atomic_t wake_feedback_active;
-K_SEM_DEFINE(led_update, 0, 1);
-
-/* BLE callback only records intent. The main LED owner does all PWM work. */
-void squire_wake_feedback_start(void)
-{
-    atomic_set(&wake_feedback_started, (atomic_val_t)k_uptime_get_32());
-    atomic_set(&wake_feedback_active, 1);
-    /* Wake the LED owner immediately; never touch PWM from the BLE callback. */
-    k_sem_give(&led_update);
-}
 
 static void print_reset_reason(void)
 {
@@ -147,7 +133,6 @@ void set_led_state()
 {
     // If device is off, turn off all LEDs immediately
     if (is_off) {
-        atomic_clear(&wake_feedback_active);
         led_off();
         return;
     }
@@ -162,18 +147,6 @@ void set_led_state()
         return;
     }
 #endif
-
-    if (atomic_get(&wake_feedback_active)) {
-        int phase = squire_wake_phase(k_uptime_get_32(), (uint32_t)atomic_get(&wake_feedback_started),
-                                     is_connected, is_off);
-        if (phase >= 0) {
-            set_led_green(phase != 0);
-            set_led_blue(false);
-            set_led_red(false);
-            return;
-        }
-        atomic_clear(&wake_feedback_active);
-    }
 
     bool green = false;
     bool blue = false;
@@ -383,9 +356,7 @@ int main(void)
 #endif
 
         set_led_state();
-        /* Keep the ordinary one-second cadence, but a wake cue interrupts it.
-         * A binary semaphore also preserves a cue arriving just before wait. */
-        (void)k_sem_take(&led_update, K_MSEC(1000));
+        k_msleep(1000);
     }
 
     printk("Exiting omi...");
